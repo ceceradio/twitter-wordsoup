@@ -1,0 +1,9 @@
+{
+  "name": "wordFluid",
+  "description": "Word Soup Twitter Robot",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "ntwitter": "0.x"
+  }
+}
