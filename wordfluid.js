@@ -1,6 +1,8 @@
 var twitter = require('ntwitter');
 var util = require('util');
-
+var fs = require('fs');
+var path = require('path');
+var config = require('./config.js');
 var twit = new twitter(config.twitter);
 
 var Dictionary = new Array();
@@ -8,6 +10,7 @@ var Dictionary = new Array();
 Dictionary.push('ton');
 Dictionary.push('tonno');
 Dictionary.push('no');
+Dictionary.push('Fuck');
 
 var lastProcessed = 0;
 function doMentions(doTweet) {
@@ -48,49 +51,70 @@ function doMentions(doTweet) {
 		});
     });
 	
-}	
+}
+
+function removeBadWords(callback) {
+	var stopwords = {};
+	var filePath = path.join(__dirname, 'slursandbadwords.txt');
+	fs.readFile(filePath, 'utf-8', function(err,data) {
+		if (err) {
+			callback(err);
+			return;
+		}
+		var stopwordsArray = data.split(/\s+/);
+		for (var i=0;i<Dictionary.length;i++) {
+			if (stopwordsArray.indexOf(Dictionary[i].toLowerCase().replace(/\W+/g, " ")) > -1) {
+				Dictionary.splice(i, 1);
+			}
+		}
+		console.log(Dictionary);
+	});
+}
 	
 function doNewTweet() {
-	//Get mentions and see if we have any new words!
-	
-	//Create our tweet
-	var str = '';
-	while(str.length < 138) {
-		var i = Math.floor((Math.random()*Dictionary.length));
-		var cap = false;
-		if (Dictionary[i].length + 2 + str.length > 138) {
-			break;
-		}
-		if (str!='') {
-			var addPeriod = Math.floor((Math.random()*100)+1);
-			if (addPeriod>80) {
-				str = str + '. ';
-				cap= true;
+	//Remove any bad words from our dictionary
+	removeBadWords(function(err) {
+		if (err)
+			console.log("ERROR: could not remove bad words");
+		//Create our tweet
+		var str = '';
+		while(str.length < 138) {
+			var i = Math.floor((Math.random()*Dictionary.length));
+			var cap = false;
+			if (Dictionary[i].length + 2 + str.length > 138) {
+				break;
 			}
+			if (str!='') {
+				var addPeriod = Math.floor((Math.random()*100)+1);
+				if (addPeriod>80) {
+					str = str + '. ';
+					cap= true;
+				}
+				else {
+					str = str + ' ';
+				}
+			}
+			else { 
+				cap = true;
+			}
+			if (cap) {
+				str = str + ucwords(Dictionary[i]);
+			}		
 			else {
-				str = str + ' ';
+				str = str + Dictionary[i];
 			}
 		}
-		else { 
-			cap = true;
-		}
-		if (cap) {
-			str = str + ucwords(Dictionary[i]);
-		}		
-		else {
-			str = str + Dictionary[i];
-		}
-	}
-	str = str + '.';
-	console.log(str.length + " " + str);
-	twit.verifyCredentials(function(data) {
-        console.log(util.inspect(data));
-    })
-    .updateStatus(str,
-        function(data) {
-            console.log(util.inspect(data));
-        }
-    );
+		str = str + '.';
+		console.log(str.length + " " + str);
+		twit.verifyCredentials(function(data) {
+			console.log(util.inspect(data));
+		})
+		.updateStatus(str,
+			function(data) {
+				console.log(util.inspect(data));
+			}
+		);
+	});
 }
 
 
@@ -111,7 +135,7 @@ function ucwords (str) {
     return $1.toUpperCase();
   });
 }
-
+removeBadWords(function() {});
 setInterval(doMentions,4 * 60 * 1000);
 setInterval(doNewTweet,2 * 60 * 1000);
 doMentions(true);
